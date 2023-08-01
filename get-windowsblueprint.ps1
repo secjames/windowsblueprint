@@ -8,7 +8,7 @@
 # Comments: Creates a system blueprint for the sytems provided in 
 # c:\scripts\powershell\Servers-to-Scan.txt (one per line) and creates are report
 # for each server in C:\scripts\powershell\blueprints\ 
-# Named: {srv}-wnidowsblueprint-YYYYMMDD.txt
+# Named: YYYYmmddHHMMSS-{Hostname}-Blueprint.txt
 #                        
 # Usage: .\get-windowsblueprint.ps1          
 #           
@@ -52,12 +52,11 @@ Function logstamp {
     # pad date
     if ($mo.length -lt 2) {$mo="0" + $mo}
     if ($dy.length -lt 2) {$dy="0" + $dy}
-#    if ($hr.length -lt 2) {$hr="0" + $hr}
-#    if ($mi.length -lt 2) {$mi="0" + $mi}
-#    if ($sc.length -lt 2) {$sc="0" + $sc}
+    if ($hr.length -lt 2) {$hr="0" + $hr}
+    if ($mi.length -lt 2) {$mi="0" + $mi}
+    if ($sc.length -lt 2) {$sc="0" + $sc}
     
-    write-output $yr$mo$dy
-#     $hr$mi$sc
+    write-output $yr$mo$dy$hr$mi$sc
 }
 
 #---------------------------
@@ -65,7 +64,7 @@ Function logstamp {
 #---------------------------
 
 #Path to Server List
-#$srv = "TFSZapTest01"
+#$srv = "Test01"
 $srvList = (Get-Content c:\scripts\powershell\Servers-to-Scan.txt)
 
 foreach($srv in $srvList) 
@@ -81,7 +80,7 @@ $logExt = ".txt"
 # logfile path
 $logPath = "C:\scripts\powershell\blueprints\"
 # create myOutFile
-$myOutFile = $logPath + $logFilename + "-" + $logDate + $logExt
+$myOutFile = $logPath + $logDate + "-" + $logFilename + $logExt
 
 # Create Logfile and path if necessary
 If (Test-Path $logPath)
@@ -124,7 +123,7 @@ $myDate = get-Date
 
 # Table of Contents
 Write-Output "Table of Contents:" | Out-File $myOutFile -Append -width 120
-Write-Output "# 1. Host Name" | Out-File $myOutFile -Append -width 120
+Write-Output " 1. Host Name" | Out-File $myOutFile -Append -width 120
 Write-Output " 2. System Information (IP, DNS Gateway)" | Out-File $myOutFile -Append -width 120
 Write-Output " 3. Hardware Information" | Out-File $myOutFile -Append -width 120
 Write-Output " 4. Host File" | Out-File $myOutFile -Append -width 120
@@ -162,7 +161,6 @@ Write-Output "Host: $myHostNameOnly" | Out-File $myOutFile -Append -width 120
 # 4. Host File
 # ----------------------
 # Comment Goes here
-
 
 # 5. User Information
 # ----------------------
