@@ -2,7 +2,7 @@
 Powershell Script to blueprint a windows system
 windowsblueprint.ps1
 
-Authors: James McNabb, Eric Wold,  Dylan Chamberlain, William Wier
+Authors: James McNabb, Eric Wold, Dylan Chamberlain, Nicholas Fair, William Wier
 
 This script "blueprints" a Windows system and gathers information for system vetting needs.
 An overview of report secitons can be found below.
@@ -25,4 +25,4 @@ Report Sections:
 14. File Shares
 15. Printer Information
 
-Usage:
+Usage: Test2
