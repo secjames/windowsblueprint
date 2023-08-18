@@ -161,6 +161,41 @@ Write-Output "Host: $myHostNameOnly" | Out-File $myOutFile -Append -width 120
 # ------------------------------------------
 # Comment Goes here
 
+$computerSystem = Get-WmiObject Win32_ComputerSystem -computername $srv
+$computerDomain = $computerSystem.Domain 
+$computerBIOS = Get-WmiObject Win32_BIOS -computername $srv
+$computerOS = Get-WmiObject Win32_OperatingSystem -computername $srv
+$operatingSN = $computerOS.SerialNumber
+$computerCPU = Get-WmiObject Win32_Processor -computername $srv
+$computerHDD = Get-WmiObject Win32_LogicalDisk -computername $srv -Filter "DeviceID = 'C:'"
+$separator = "-------------------------------------------------------------------------------------------------------------"
+$hardwareSection = "                                   --- Hardware Information ---"
+
+$hardwareResults = @"
+$separator
+
+$hardwareSection
+
+$separator
+
+Name:               $($computerSystem.Name) 
+Domain:             $computerDomain                       
+Manufacturer:       $($computerSystem.Manufacturer)                            
+Model:              $($computerSystem.Model)                              
+Serial Number:      $($computerBIOS.SerialNumber)
+CPU:                $($computerCPU.Name -join ', ')
+HDD Space:          $("{0:P2}" -f ($computerHDD.FreeSpace/$computerHDD.Size)) Free ( $($computerHDD.FreeSpace/1GB)GB / $($computerHDD.Size/1GB)GB )
+RAM:                $("{0:N2}" -f ($computerSystem.TotalPhysicalMemory/1GB))GB
+Operating System:   $($computerOS.Caption)
+Windows SN:         $($operatingSN)
+
+$separator
+
+"@
+
+$hardwareResults | Out-File -FilePath $myOutFile -Append
+
+
 # ------------------------------------------
 # 4. Host File
 # ------------------------------------------
@@ -185,6 +220,21 @@ Write-Output "Host: $myHostNameOnly" | Out-File $myOutFile -Append -width 120
 # 8. Services and Statuses
 # ------------------------------------------
 # Comment Goes here
+
+$services = Get-Service -computername $srv | Sort-Object { $_.Status, $_.Name}
+$serviceSection = "                                   --- Services and Status ---"
+$serviceHeader = "Status     | Service Name                             | Service DisplayName"
+$serviceResults = foreach ($service in $services) {
+    $serviceStatus = $service.Status
+    $serviceName = $service.Name
+    $serviceDisplay = $service.DisplayName
+
+    $serviceRow = "{0,-10} | {1,-80} | {2,-80}" -f $serviceStatus, $serviceName, $serviceDisplay
+    $serviceRow
+}
+
+$serviceExport = $serviceSection, "", $separator, $serviceHeader, $separator, $serviceResults, "", $separator
+$serviceExport | Out-File -FilePath $myOutFile -Append
 
 # ------------------------------------------
 # 9. Open Ports
@@ -221,5 +271,29 @@ Write-Output "Host: $myHostNameOnly" | Out-File $myOutFile -Append -width 120
 # ------------------------------------------
 # Comment Goes here
 
- 
+$printers = Get-WmiObject -Class Win32_Printer -computername $srv
+$printerSection = "                                   --- Printer Information ---"
+
+$printerResults = foreach ($printer in $printers) {
+    $printerName = $printer.Name
+    $printerStatus = $printer.PrinterStatus
+    $printerDefault = $printer.Default
+    $printerPort = $printer.PortName
+    $printerDriver = $printer.DriverName
+    $printerSeparator = "-----------------------------------------------------"
+
+    $printerRow = @"
+
+Printer Name:       $printerName
+Status:             $printerStatus
+Default:            $printerDefault
+Port Name:          $printerPort
+Driver Name:        $printerDriver
+
+"@
+    $printerRow + $printerSeparator
+}
+
+$printerExport = "", $printerSection, "", $separator, $printerResults, "", $separator
+$printerExport | Out-File -FilePath $myOutFile -Append
 }
