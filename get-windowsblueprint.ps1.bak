@@ -161,41 +161,6 @@ Write-Output "Host: $myHostNameOnly" | Out-File $myOutFile -Append -width 120
 # ------------------------------------------
 # Comment Goes here
 
-$computerSystem = Get-WmiObject Win32_ComputerSystem -computername $srv
-$computerDomain = $computerSystem.Domain 
-$computerBIOS = Get-WmiObject Win32_BIOS -computername $srv
-$computerOS = Get-WmiObject Win32_OperatingSystem -computername $srv
-$operatingSN = $computerOS.SerialNumber
-$computerCPU = Get-WmiObject Win32_Processor -computername $srv
-$computerHDD = Get-WmiObject Win32_LogicalDisk -computername $srv -Filter "DeviceID = 'C:'"
-$separator = "-------------------------------------------------------------------------------------------------------------"
-$hardwareSection = "                                   --- Hardware Information ---"
-
-$hardwareResults = @"
-$separator
-
-$hardwareSection
-
-$separator
-
-Name:               $($computerSystem.Name) 
-Domain:             $computerDomain                       
-Manufacturer:       $($computerSystem.Manufacturer)                            
-Model:              $($computerSystem.Model)                              
-Serial Number:      $($computerBIOS.SerialNumber)
-CPU:                $($computerCPU.Name -join ', ')
-HDD Space:          $("{0:P2}" -f ($computerHDD.FreeSpace/$computerHDD.Size)) Free ( $($computerHDD.FreeSpace/1GB)GB / $($computerHDD.Size/1GB)GB )
-RAM:                $("{0:N2}" -f ($computerSystem.TotalPhysicalMemory/1GB))GB
-Operating System:   $($computerOS.Caption)
-Windows SN:         $($operatingSN)
-
-$separator
-
-"@
-
-$hardwareResults | Out-File -FilePath $myOutFile -Append
-
-
 # ------------------------------------------
 # 4. Host File
 # ------------------------------------------
@@ -204,29 +169,12 @@ $hardwareResults | Out-File -FilePath $myOutFile -Append
 # ------------------------------------------
 # 5. User Information
 # ------------------------------------------
-# Find local user accounts
-Write-Output "--- 5. User Information  --- " | Out-File $myOutFile -Append -width 120
-Get-WmiObject -ComputerName $srv -Class Win32_UserAccount -Filter "LocalAccount=True" | Out-File $myOutFile -Append -width 120
+# Comment Goes here
+
 # ------------------------------------------
 # 6. Groups Information
 # ------------------------------------------
-# Find local groups and group members
-Write-Output " " | Out-File $myOutFile -Append -width 120
-Write-Output "--- 6. Groups Information  --- " | Out-File $myOutFile -Append -width 120
-		$localGroups = Get-WmiObject -Class Win32_Group -ComputerName $srv | Where-Object {$_.LocalAccount -eq $true -and $_.SID.Length -gt 0}
-		
-		foreach ($group in $localGroups) {
-		    Write-Output "Group: $($group.Name)" | Out-File $myOutFile -Append -width 120
-		    Write-Output "Members:" | Out-File $myOutFile -Append -width 120
-		
-		    $groupMembers = Get-WmiObject -Class Win32_GroupUser -ComputerName $srv | Where-Object {$_.GroupComponent -like "*`"$($group.Name)`""}
-		    foreach ($member in $groupMembers) {
-		        $memberName = $member.PartComponent -replace '^.*Name="([^"]+)".*$', '$1'
-		        Write-Output "  $memberName" | Out-File $myOutFile -Append -width 120
-		    }
-		
-		    Write-Output ""
-}
+# Comment Goes here
 
 # ------------------------------------------
 # 7. Installed Software
@@ -237,21 +185,6 @@ Write-Output "--- 6. Groups Information  --- " | Out-File $myOutFile -Append -wi
 # 8. Services and Statuses
 # ------------------------------------------
 # Comment Goes here
-
-$services = Get-Service -computername $srv | Sort-Object { $_.Status, $_.Name}
-$serviceSection = "                                   --- Services and Status ---"
-$serviceHeader = "Status     | Service Name                             | Service DisplayName"
-$serviceResults = foreach ($service in $services) {
-    $serviceStatus = $service.Status
-    $serviceName = $service.Name
-    $serviceDisplay = $service.DisplayName
-
-    $serviceRow = "{0,-10} | {1,-80} | {2,-80}" -f $serviceStatus, $serviceName, $serviceDisplay
-    $serviceRow
-}
-
-$serviceExport = $serviceSection, "", $separator, $serviceHeader, $separator, $serviceResults, "", $separator
-$serviceExport | Out-File -FilePath $myOutFile -Append
 
 # ------------------------------------------
 # 9. Open Ports
@@ -267,89 +200,11 @@ $serviceExport | Out-File -FilePath $myOutFile -Append
 # 11. Firewall Setup
 # ------------------------------------------
 # Comment Goes here
-Write-Output " " | Out-File $myOutFile -Append -width 120
-Write-Output "--- 11. Firewall Setup  --- " | Out-File $myOutFile -Append -width 120
-# Provide the remote computer name
-$remoteComputer = $srv
 
-# Provide the path for the local text document
-$localFilePath = $myOutFile
-
-# Script block to execute remotely
-$scriptBlock = {
-    # Get firewall rules on the remote computer
-    $firewallRules = Get-NetFirewallRule
-
-    # Create a custom object with firewall rule properties
-    $firewallConfig = $firewallRules | Select-Object Name, DisplayName, Enabled, Action, Direction, Profile, LocalPort, RemoteAddress
-
-    # Output the custom object
-    $firewallConfig
-}
-
-# Invoke the command on the remote computer and store the result
-$remoteFirewallConfig = Invoke-Command -ComputerName $remoteComputer -ScriptBlock $scriptBlock
-
-# Write the custom object to a local text document
-$remoteFirewallConfig | Out-File -FilePath $localFilePath -Append -width 120
 # ------------------------------------------
 # 12. Webserver Information
 # ------------------------------------------
 # Comment Goes here
-Write-Output " " | Out-File $myOutFile -Append -width 120
-# Test Connection for common webserver ports 80 and 443
-Write-Output " " | Out-File $myOutFile -Append -width 120
-Write-Output "--- 12. Webserver Information  --- " | Out-File $myOutFile -Append -width 120
-		$webServerPorts = @(80, 443)
-		
-		foreach ($port in $webServerPorts) {
-		    $result = Test-NetConnection -ComputerName $srv -Port $port -InformationLevel Quiet
-		
-		    if ($result) {
-		        Write-Output "Web server detected on port $port" | Out-File $myOutFile -Append -width 120
-		    } else {
-		        Write-Output "No web server detected on port $port" | Out-File $myOutFile -Append -width 120
-		    }
-}
-# IIS
-# Check for W3SVC Web Service
-# The W3SVC service is a Windows service that is responsible for making IIS (Internet Information Services) work. 
-# W3SVC is an acronym for World Wide Web Publishing Service
-Write-Output " " | Out-File $myOutFile -Append -width 120
-				
-		$serviceStatus = Get-Service -ComputerName $srv -Name "W3SVC"
-		
-		if ($serviceStatus.Status -eq 'Running') {
-		    Write-Output "W3SVC Web server service is running on $srv" | Out-File $myOutFile -Append -width 120
-		} else {
-		    Write-Output "W3SVC Web server service is not running on $srv" | Out-File $myOutFile -Append -width 120
-}
-
-# Check for IIS Windows Feature:
-		
-		# Get the list of installed Windows features
-		$features = Get-WindowsFeature -ComputerName $srv
-		
-		# Check if the Web-Server feature is installed
-		if ($features | Where-Object { $_.Name -eq 'Web-Server' }) {
-		    Write-Output "IIS is installed on $srv" | Out-File $myOutFile -Append -width 120
-		} else {
-		    Write-Output "IIS is not installed on $srv" | Out-File $myOutFile -Append -width 120
-}
-# Check to see if IISADMIN service is running
-		
-		#$serviceName = "IISADMIN"
-		
-		# Get the status of the IIS Admin Service
-		$serviceStatus = Get-Service -ComputerName $srv -Name "IISADMIN" -ErrorAction SilentlyContinue
-		
-		# Check if the IIS Admin Service is running
-		if ($serviceStatus -ne $null -and $serviceStatus.Status -eq 'Running') {
-		    Write-Output "IIS Admin Service is running on $srv" | Out-File $myOutFile -Append -width 120
-		} else {
-		    Write-Output "IIS Admin Service is NOT running on $srv" | Out-File $myOutFile -Append -width 120
-}
-# APACHE
 
 # ------------------------------------------
 # 13. SSL Information
@@ -366,29 +221,5 @@ Write-Output " " | Out-File $myOutFile -Append -width 120
 # ------------------------------------------
 # Comment Goes here
 
-$printers = Get-WmiObject -Class Win32_Printer -computername $srv
-$printerSection = "                                   --- Printer Information ---"
-
-$printerResults = foreach ($printer in $printers) {
-    $printerName = $printer.Name
-    $printerStatus = $printer.PrinterStatus
-    $printerDefault = $printer.Default
-    $printerPort = $printer.PortName
-    $printerDriver = $printer.DriverName
-    $printerSeparator = "-----------------------------------------------------"
-
-    $printerRow = @"
-
-Printer Name:       $printerName
-Status:             $printerStatus
-Default:            $printerDefault
-Port Name:          $printerPort
-Driver Name:        $printerDriver
-
-"@
-    $printerRow + $printerSeparator
-}
-
-$printerExport = "", $printerSection, "", $separator, $printerResults, "", $separator
-$printerExport | Out-File -FilePath $myOutFile -Append
+ 
 }
